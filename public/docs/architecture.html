@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avatar Driver Architecture</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <nav class="top-nav">
+        <a href="../">Demo</a>
+        <a href="./index.html">Docs</a>
+        <a href="https://github.com/cutesnow/Avatar-Driver">GitHub</a>
+      </nav>
+      <article>
+        <p class="eyebrow">Architecture</p>
+        <h1>Browser-Local Face Driving</h1>
+        <p>
+          The app requests webcam access only after the user clicks Start Camera.
+          Video frames are converted to ImageBitmap objects and sent to a classic
+          Web Worker that runs MediaPipe Face Landmarker.
+        </p>
+        <h2>Runtime Flow</h2>
+        <ol>
+          <li>Camera stream attaches to the video element.</li>
+          <li>The frame loop samples video at the target FPS.</li>
+          <li>The worker runs landmark, blendshape, and head pose detection.</li>
+          <li>Results are normalized into the shared expression store.</li>
+          <li>The Three.js render loop updates the face mesh from landmarks.</li>
+        </ol>
+        <h2>Mesh Mapping</h2>
+        <p>
+          MediaPipe can return 478 landmarks. The canonical face mesh has 468
+          vertices, so the renderer uses the first 468 landmarks and ignores the
+          extra eye landmarks.
+        </p>
+        <h2>Static Runtime</h2>
+        <p>
+          Model, WASM, worker, docs, and demo assets live under public and are
+          copied into dist by Vite.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "version": "0.1.0",
+  "source": "mediapipe-face-landmarker",
+  "target": "vrm-expression",
+  "mappings": {
+    "happy": [
+      { "input": "mouthSmileLeft", "weight": 0.5 },
+      { "input": "mouthSmileRight", "weight": 0.5 },
+      { "input": "cheekSquintLeft", "weight": 0.2 },
+      { "input": "cheekSquintRight", "weight": 0.2 }
+    ],
+    "surprised": [
+      { "input": "jawOpen", "weight": 0.8 },
+      { "input": "eyeWideLeft", "weight": 0.4 },
+      { "input": "eyeWideRight", "weight": 0.4 },
+      { "input": "browInnerUp", "weight": 0.5 }
+    ],
+    "angry": [
+      { "input": "browDownLeft", "weight": 0.6 },
+      { "input": "browDownRight", "weight": 0.6 },
+      { "input": "eyeSquintLeft", "weight": 0.2 },
+      { "input": "eyeSquintRight", "weight": 0.2 }
+    ],
+    "sad": [
+      { "input": "mouthFrownLeft", "weight": 0.5 },
+      { "input": "mouthFrownRight", "weight": 0.5 },
+      { "input": "browInnerUp", "weight": 0.4 }
+    ],
+    "blinkLeft": [{ "input": "eyeBlinkLeft", "weight": 1.0 }],
+    "blinkRight": [{ "input": "eyeBlinkRight", "weight": 1.0 }]
+  },
+  "smoothing": {
+    "enabled": true,
+    "factor": 0.65
+  }
+}

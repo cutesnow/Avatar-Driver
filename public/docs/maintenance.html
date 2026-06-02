@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avatar Driver Maintenance</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <nav class="top-nav">
+        <a href="../">Demo</a>
+        <a href="./index.html">Docs</a>
+        <a href="https://github.com/cutesnow/Avatar-Driver">GitHub</a>
+      </nav>
+      <article>
+        <p class="eyebrow">Maintenance</p>
+        <h1>Maintainer Guide</h1>
+        <h2>Release Checklist</h2>
+        <ul>
+          <li>Run typecheck, lint, tests, and build.</li>
+          <li>Verify the demo in external Chrome.</li>
+          <li>Confirm Debug shows Mesh: updated when a face is detected.</li>
+          <li>Update the changelog.</li>
+          <li>Push to main and check the Pages deployment.</li>
+        </ul>
+        <h2>Asset Policy</h2>
+        <p>
+          Every runtime asset in public should keep source and license notes.
+          The demo depends on the MediaPipe task model, canonical face OBJ, WASM
+          runtime, and classic worker.
+        </p>
+        <h2>Debug States</h2>
+        <p>
+          Mesh: no-landmarks means no face landmarks are available. Mesh:
+          updated means the 3D face mesh is actively driven by landmarks.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

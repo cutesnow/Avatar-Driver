@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avatar Driver Testing</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <nav class="top-nav">
+        <a href="../">Demo</a>
+        <a href="./index.html">Docs</a>
+        <a href="https://github.com/cutesnow/Avatar-Driver">GitHub</a>
+      </nav>
+      <article>
+        <p class="eyebrow">Testing</p>
+        <h1>Validation</h1>
+        <h2>Automated Checks</h2>
+        <pre><code>pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build</code></pre>
+        <h2>Manual Camera Test</h2>
+        <ol>
+          <li>Open the demo in external Chrome.</li>
+          <li>Click Start Camera and grant permission.</li>
+          <li>Confirm Camera running and Tracker ready.</li>
+          <li>Move into view and confirm face detected: true.</li>
+          <li>Confirm Mesh: updated in the Debug panel.</li>
+        </ol>
+      </article>
+    </main>
+  </body>
+</html>
