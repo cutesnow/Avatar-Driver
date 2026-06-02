@@ -27,6 +27,7 @@ const docsPath = assetUrl("docs/");
 export function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const workerRef = useRef<Worker>();
+  const trackerInitPromiseRef = useRef<Promise<void>>();
   const stopSessionRef = useRef<() => void>();
   const abortControllerRef = useRef<AbortController>();
   const startingRef = useRef(false);
@@ -51,8 +52,6 @@ export function App() {
     abortControllerRef.current = undefined;
     stopSessionRef.current?.();
     stopSessionRef.current = undefined;
-    workerRef.current = undefined;
-    workerReadyRef.current = false;
     workerBusyRef.current = false;
 
     const video = videoRef.current;
@@ -134,6 +133,48 @@ export function App() {
     setLatestFrame(expressionFrame);
   }, []);
 
+  const ensureTrackerReady = useCallback(() => {
+    if (workerReadyRef.current && workerRef.current) {
+      expressionStore.getState().setDiagnostics({ workerReady: true });
+      setTrackingState("Tracker ready");
+      return Promise.resolve();
+    }
+
+    if (trackerInitPromiseRef.current) {
+      return trackerInitPromiseRef.current;
+    }
+
+    setTrackingState("Loading tracker");
+
+    const worker = new Worker(faceWorkerPath);
+    workerReadyRef.current = false;
+    workerBusyRef.current = false;
+    workerRef.current = worker;
+
+    trackerInitPromiseRef.current = new Promise<void>((resolve, reject) => {
+      worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+        processFaceResult(event.data);
+
+        if (event.data.type === "ready") {
+          resolve();
+        }
+
+        if (event.data.type === "error") {
+          trackerInitPromiseRef.current = undefined;
+          reject(new Error(event.data.message));
+        }
+      };
+    });
+
+    worker.postMessage({
+      type: "init",
+      modelPath,
+      wasmBasePath,
+    });
+
+    return trackerInitPromiseRef.current;
+  }, [processFaceResult]);
+
   const start = useCallback(async () => {
     const video = videoRef.current;
 
@@ -161,6 +202,13 @@ export function App() {
         () => fallbackMappingConfig,
       );
       expressionStore.getState().setMappingProfile(mappingRef.current.version);
+      void ensureTrackerReady().catch((trackerError) => {
+        setError(
+          trackerError instanceof Error
+            ? trackerError.message
+            : String(trackerError),
+        );
+      });
 
       if (startId !== startSequenceRef.current) {
         return;
@@ -175,30 +223,24 @@ export function App() {
 
       startingRef.current = false;
       setCameraState("Camera running");
+      await ensureTrackerReady();
+
+      if (startId !== startSequenceRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       expressionStore.getState().setDiagnostics({
         videoWidth: video.videoWidth,
         videoHeight: video.videoHeight,
         framesSent: 0,
         framesReceived: 0,
         facesDetected: 0,
-        workerReady: false,
+        workerReady: workerReadyRef.current,
         lastWorkerError: undefined,
       });
 
-      const worker = new Worker(faceWorkerPath);
-
-      workerReadyRef.current = false;
       workerBusyRef.current = false;
-      workerRef.current = worker;
-      worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
-        processFaceResult(event.data);
-
-      setTrackingState("Loading tracker");
-      worker.postMessage({
-        type: "init",
-        modelPath,
-        wasmBasePath,
-      });
 
       const stopLoop = startVideoFrameLoop({
         video,
@@ -224,10 +266,7 @@ export function App() {
 
       stopSessionRef.current = () => {
         stopLoop();
-        workerReadyRef.current = false;
         workerBusyRef.current = false;
-        expressionStore.getState().setDiagnostics({ workerReady: false });
-        worker.terminate();
         stream.getTracks().forEach((track) => track.stop());
       };
     } catch (startError) {
@@ -243,11 +282,22 @@ export function App() {
       setCameraState("Camera stopped");
       setTrackingState("Tracker idle");
     }
-  }, [processFaceResult, stopSession]);
+  }, [ensureTrackerReady, stopSession]);
+
+  useEffect(() => {
+    void ensureTrackerReady().catch((trackerError) => {
+      setError(
+        trackerError instanceof Error ? trackerError.message : String(trackerError),
+      );
+    });
+  }, [ensureTrackerReady]);
 
   useEffect(() => {
     return () => {
       stopSession();
+      workerRef.current?.terminate();
+      workerRef.current = undefined;
+      trackerInitPromiseRef.current = undefined;
     };
   }, [stopSession]);
 
@@ -293,14 +343,18 @@ export function App() {
               if (isCameraStarting) {
                 stopSession();
                 setCameraState("Camera idle");
-                setTrackingState("Tracker idle");
+                setTrackingState(
+                  workerReadyRef.current ? "Tracker ready" : "Tracker idle",
+                );
                 return;
               }
 
               if (isCameraRunning) {
                 stopSession();
                 setCameraState("Camera idle");
-                setTrackingState("Tracker idle");
+                setTrackingState(
+                  workerReadyRef.current ? "Tracker ready" : "Tracker idle",
+                );
                 return;
               }
 
