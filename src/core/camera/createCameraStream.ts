@@ -25,10 +25,13 @@ export async function createCameraStream(
       throw new DOMException("Camera start was cancelled.", "AbortError");
     }
 
-    video.srcObject = stream;
     video.muted = true;
     video.playsInline = true;
-    await video.play();
+    video.autoplay = true;
+    video.srcObject = stream;
+
+    await waitForVideoReady(video, signal);
+    await playVideo(video, signal);
 
     return stream;
   } catch (error) {
@@ -49,5 +52,83 @@ export async function createCameraStream(
     }
 
     throw new Error(mediaError.message || "Unable to start the camera.");
+  }
+}
+
+function waitForVideoReady(video: HTMLVideoElement, signal?: AbortSignal) {
+  if (
+    video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+    video.videoWidth > 0 &&
+    video.videoHeight > 0
+  ) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Camera video did not become ready. Try Start Camera again."));
+    }, 8000);
+
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      video.removeEventListener("loadedmetadata", onReady);
+      video.removeEventListener("loadeddata", onReady);
+      video.removeEventListener("canplay", onReady);
+      video.removeEventListener("error", onError);
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    const onReady = () => {
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        return;
+      }
+
+      cleanup();
+      resolve();
+    };
+
+    const onError = () => {
+      cleanup();
+      reject(new Error("Camera video stream failed to load."));
+    };
+
+    const onAbort = () => {
+      cleanup();
+      reject(new DOMException("Camera start was cancelled.", "AbortError"));
+    };
+
+    video.addEventListener("loadedmetadata", onReady);
+    video.addEventListener("loadeddata", onReady);
+    video.addEventListener("canplay", onReady);
+    video.addEventListener("error", onError);
+    signal?.addEventListener("abort", onAbort, { once: true });
+
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+
+    onReady();
+  });
+}
+
+async function playVideo(video: HTMLVideoElement, signal?: AbortSignal) {
+  try {
+    await video.play();
+  } catch (error) {
+    if (signal?.aborted) {
+      throw new DOMException("Camera start was cancelled.", "AbortError");
+    }
+
+    const mediaError = error as DOMException;
+
+    if (mediaError.name === "AbortError") {
+      await waitForVideoReady(video, signal);
+      await video.play();
+      return;
+    }
+
+    throw error;
   }
 }

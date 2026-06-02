@@ -29,6 +29,7 @@ export function App() {
   const workerRef = useRef<Worker>();
   const stopSessionRef = useRef<() => void>();
   const abortControllerRef = useRef<AbortController>();
+  const startingRef = useRef(false);
   const startSequenceRef = useRef(0);
   const workerBusyRef = useRef(false);
   const workerReadyRef = useRef(false);
@@ -45,6 +46,7 @@ export function App() {
 
   const stopSession = useCallback(() => {
     startSequenceRef.current += 1;
+    startingRef.current = false;
     abortControllerRef.current?.abort();
     abortControllerRef.current = undefined;
     stopSessionRef.current?.();
@@ -139,7 +141,13 @@ export function App() {
       return;
     }
 
+    if (startingRef.current) {
+      return;
+    }
+
+    startingRef.current = true;
     stopSession();
+    startingRef.current = true;
     const startId = startSequenceRef.current + 1;
     startSequenceRef.current = startId;
     const abortController = new AbortController();
@@ -165,6 +173,7 @@ export function App() {
         return;
       }
 
+      startingRef.current = false;
       setCameraState("Camera running");
       expressionStore.getState().setDiagnostics({
         videoWidth: video.videoWidth,
@@ -222,6 +231,7 @@ export function App() {
         stream.getTracks().forEach((track) => track.stop());
       };
     } catch (startError) {
+      startingRef.current = false;
       if (
         startId !== startSequenceRef.current ||
         (startError instanceof DOMException && startError.name === "AbortError")
@@ -242,6 +252,7 @@ export function App() {
   }, [stopSession]);
 
   const isCameraRunning = cameraState === "Camera running";
+  const isCameraStarting = cameraState === "Requesting camera";
 
   return (
     <main className={debugVisible ? "app-shell debug-open" : "app-shell"}>
@@ -279,6 +290,13 @@ export function App() {
           <button
             type="button"
             onClick={() => {
+              if (isCameraStarting) {
+                stopSession();
+                setCameraState("Camera idle");
+                setTrackingState("Tracker idle");
+                return;
+              }
+
               if (isCameraRunning) {
                 stopSession();
                 setCameraState("Camera idle");
@@ -289,7 +307,11 @@ export function App() {
               void start();
             }}
           >
-            {isCameraRunning ? "Stop Camera" : "Start Camera"}
+            {isCameraRunning
+              ? "Stop Camera"
+              : isCameraStarting
+                ? "Cancel"
+                : "Start Camera"}
           </button>
           <label>
             <input
